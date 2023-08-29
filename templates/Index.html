@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenAI Chatbot</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='openAI.css')}}"> 
+    <!-- This href is to access the static folder as required by Flask's documentation. 
+    More about this can be found here: https://flask.palletsprojects.com/en/2.3.x/quickstart/#static-files -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.155.0/three.min.js" integrity="sha512-auFmPm+de880vk/c+bgBmuOnQ7BM28z7zPWmepVgX8737t75OHZjElOnQqERwP8cE4DIyCJ+gb1kE0b/eLWcnA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+<body onload="init()">
+
+  <div class="loading-screen">
+    <div class="loading-content">
+      <p>Loading</p>
+      <div class="loading-dots-container">
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+        <div class="loading-dot"></div>
+      </div>
+      <p class="loading-progress"></p>
+      <p class="function-names"></p>
+    </div>
+    <div class="rule-names-container">
+      <div class="rule-names"></div>
+    </div>
+  </div>
+
+  <!-- <div id="waterShader"></div> -->
+  
+  <div class="content">
+    <!-- Your actual content goes here -->
+    <div class="chatbox-button" onclick="toggleChatbox()">
+      <div class="plus-sign">&#43;</div>
+    </div>
+  
+      <div class="chatbox chatbox-expanded" id="expanded-chatbox">
+          <button id="record-button" class="record"><i class="fa fa-microphone"></i></button>
+          <h1>CICG AI CHAT</h1>
+              <div id="chat-display"></div>
+              <form id="user-input-form"  action="/chat"  method="post">
+                  <form id="user-talk-form" action="/talk" method="post">
+                      <input type="text" id="user-input" placeholder="Type your message...">
+                      <button type="submit">Send</button>
+                  </form>
+              </form>
+  
+              <div class="language-buttons">
+                <div class="dropdown">
+                  <button  id="dropdown-button" onclick="toggleDropdown()" class="dropbtn">
+                    <span id="dropbtn-label">EN</span>
+                    <span class="arrow-down">&#x25BE;</span>
+                  </button>
+                  <div id="dropdown-content" class="dropdown-content">
+                    <a value="en-US" onclick="changeLanguage('en')">English</a>
+                    <a value="fr-FR" onclick="changeLanguage('fr')">French</a>
+                    <!-- Add more language options if needed -->
+                  </div>
+                </div>
+              </div>
+        </div>
+  
+        <button id="startButton" class="show-button"><i class="fa-solid fa-play"></i></button>
+          <canvas id="background-canvas">
+          </canvas>
+  
+          <audio loop id="music" preload="auto" style="display: none" >
+            <source src="/static/video/spiral_mushoku tensei_1080pFHR.mp4" type="audio/mpeg">
+          </audio>
+  </div>
+  
+        <script src="{{ url_for('static', filename='ammo.wasm.js') }}"></script>
+        <script src="{{ url_for('static', filename='chatBox.js') }}"></script>
+        <script src="{{ url_for('static', filename='portfolio.js') }}"></script>
+<script type="importmap">
+    {
+        "imports": {
+            "three": "https://threejs.org/build/three.module.js"
+        }
+    }
+</script>  
+
+<!-- This script will render glb into a scene and using camera to moving around the scene freely -->
+<script type="module">
+    import{GLTFLoader} from 'https://threejs.org/examples/jsm/loaders/GLTFLoader.js'
+    import videoAsset from './static/assetPath.js';
+    let model;
+    let model2;
+    let camera, scene, renderer;
+    let mixer;
+    let animations;
+
+    const rotationSpeed = 0.02;
+    const clock = new THREE.Clock();
+
+    let animationActions = {};
+    let sharedFunctions = {};
+    let botAnimationsToPlay2;
+    let botAnimationsToPlay3;
+
+  let capsuleMesh;
+  let focusPointMesh;
+
+    let isRotating = false;
+    const cameraSpeed = 0.1;
+
+    const keys = {
+    ArrowLeft: false,
+    ArrowRight: false,
+    ArrowUp: false,
+    ArrowDown: false,
+    KeyA: false,
+    KeyD: false,
+    KeyW: false,
+    KeyS: false,
+    KeyQ: false,
+    KeyE: false,
+  };
+
+    function loaderGTFL(){
+        const backgroundCanvas = document.getElementById("background-canvas");
+
+        const renderer = new THREE.WebGLRenderer({ canvas: backgroundCanvas });
+            // Kích thước canvas bằng với kích thước của cửa sổ trình duyệt
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.outputColorSpace  = THREE.SRGBColorSpace;
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
+
+            // Tạo một scene
+            scene = new THREE.Scene();
+
+            let cameraPosition = new THREE.Vector3(1, 1.7, -24);
+            const cameraRotation = new THREE.Euler(0, 179.1, 0)
+    
+    // Tạo camera và đặt vị trí
+    camera = new THREE.PerspectiveCamera(
+        60, // Góc nhìn (field of view)
+        window.innerWidth / window.innerHeight, // Tỉ lệ khung hình
+        0.1, // Gần nhất mức hiển thị
+        1000 // Xa nhất mức hiển thị
+    );
+    camera.position.copy(cameraPosition);
+    camera.rotation.copy(cameraRotation)
+
+            // Add ambient light to the scene
+            const ambientLight = new THREE.AmbientLight(0xffffff, 2); // Choose a color and intensity
+            scene.add(ambientLight);
+
+             // Add a directional light to the scene
+            let light = new THREE.DirectionalLight(0xffffff, 0.4,50);
+            light.position.set(1.2,2,-20.5); // Set light position
+            light.target.position.set(0,0,0);
+            light.castShadow = true;
+            scene.add(light);
+            scene.add(light.target);
+          
+
+             // Create a loader to load the model
+            const loader = new GLTFLoader().setPath( './static/' );
+
+
+             // Keyboard input
+  window.addEventListener('keydown', function (event) {
+    const code = event.code;
+    if (keys.hasOwnProperty(code)) {
+      keys[code] = true;
+    }
+  });
+
+  window.addEventListener('keyup', function (event) {
+    const code = event.code;
+    if (keys.hasOwnProperty(code)) {
+      keys[code] = false;
+    }
+  });
+
+            /// this can be called in later script.
+            sharedFunctions.playNPCAnimation = function (model, animations, animationsToPlay) {
+                // Check if model has animations and the animations array is not empty
+                if (model && animations && animations.length > 0 && animationsToPlay.length > 0) {
+                // Create a new animation mixer for the model
+                    mixer = new THREE.AnimationMixer(model);
+
+                    // Create an object to store AnimationActions for each animation
+
+                    // Create AnimationAction for each specified animation
+                    animationsToPlay.forEach(animationToPlay => {
+                    let animation;
+
+                    if (typeof animationToPlay === 'number') {
+                    // By index
+                      animation = animations[animationToPlay];
+                      } else if (typeof animationToPlay === 'string') {
+                      // By name
+                        animation = animations.find(anim => anim.name === animationToPlay);
+                        }
+
+                          if (animation) {
+                              animationActions[animation.name] = mixer.clipAction(animation);
+                              animationActions[animation.name].play();
+                              console.log(animationActions);
+                          }
+                        });
+                      }
+                    };
+            
+            let isThirdPersonView = false;
+            
+            
+            // Define a pivot object for the third-person camera
+            const thirdPersonCameraPivot = new THREE.Object3D();
+            scene.add(thirdPersonCameraPivot);
+
+            // Define the offset for the third-person camera
+            const thirdPersonCameraOffset = new THREE.Vector3(0, 1, -3);
+
+            // Store the initial position and rotation of the first-person camera
+            const initialFirstPersonPosition = new THREE.Vector3(0, 1.7, -24);
+
+            const rotationOffset = Math.PI; // Adjust as needed
+
+            // Function to toggle between first-person and third-person view
+            function toggleCameraView() {
+                    isThirdPersonView = !isThirdPersonView; // Toggle the view mode
+
+                    if (isThirdPersonView) {
+
+                    // Set the position of the third-person camera pivot
+                    thirdPersonCameraPivot.position.copy(capsuleMesh.position);
+
+                    thirdPersonCameraPivot.rotation.setFromQuaternion(camera.quaternion);
+                    thirdPersonCameraPivot.rotation.y += rotationOffset;
+                    // console.log(capsuleMesh.rotation);
+                    // Look at the capsule mesh
+                    camera.lookAt(capsuleMesh.position);
+
+                    // Hide the first-person camera and show the third-person camera
+                    camera.visible = false;
+                    thirdPersonCameraPivot.visible = true;
+
+                    capsuleMesh.visible = true;
+                } else {
+                 // Set camera to first-person view
+                camera.visible = true;
+                thirdPersonCameraPivot.visible = false;
+                
+                // Set the first-person camera position and rotation
+                // Set the position and rotation for the first-person camera
+                //This will give a default position and rotation when changing into 1st person camera.
+                camera.position.copy(capsuleMesh.position);
+                camera.rotation.setFromQuaternion(thirdPersonCameraPivot.quaternion);
+                console.log(camera.rotation.setFromQuaternion(thirdPersonCameraPivot.quaternion));
+                camera.rotation.y  += rotationOffset;
+
+                console.log("camera Rotation: " +rotationOffset);
+
+                // Hide the third-person camera and show the first-person camera
+                camera.visible = true;
+                thirdPersonCameraPivot.visible = false;
+
+                capsuleMesh.visible = false;
+                }        
+            }
+
+                  // Listen for the 'keydown' event to toggle the camera view using the 'F' key
+                  window.addEventListener('keydown', function(event) {
+                    if (event.code === 'KeyF') {
+                        toggleCameraView();
+                    }
+                });
+            
+            //Load the 3D model
+            loader.load('3doffice.glb', function (gltf) {
+                // Get the loaded model
+                model = gltf.scene;
+                 //Add position and rotation to model
+                model.position.set(0,0,0);
+                model.rotation.set(0,0,0);
+                model.receiveShadow = true;
+                // Add the model to the scene
+                scene.add(model);
+                scene.add(camera);
+
+                // Create the capsule mesh after the model has been loaded
+                const capsuleGeometry = new THREE.CylinderGeometry(1, 1, 2, 16);
+                const capsuleMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff }); // White color
+                capsuleMesh = new THREE.Mesh(capsuleGeometry, capsuleMaterial);
+                capsuleMesh.visible = false; // Start with the capsule mesh hidden
+                scene.add(capsuleMesh);
+
+                 // Call animate after the model has been loaded
+                animate(); 
+            });
+
+            loader.load('boss2lips.glb',function(gltf){
+                model2 = gltf.scene 
+                scene.add(model2);
+                model2.position.set(1.05,0,-20.5);
+                model2.rotation.set(0,-160.2,0);
+                model2.castShadow = true;
+                model2.receiveShadow = false;
+
+                // Load multiple animations from the GLTF file
+                animations = gltf.animations;
+                // Call the function to play the animation once
+                //playAnimationOnce(model2, gltf.animations);
+
+                // Specify the names and/or indices of the animations to be played simultaneously
+                const animationsToPlay = [3];
+                sharedFunctions.playNPCAnimation(model2,animations,animationsToPlay);
+                startLoading();
+                animate();
+            })
+            
+            const videoSrc = videoAsset.path;
+            let video;
+            let videoTexture;
+            let listener;
+            let audioElement =  document.getElementById( 'music' );
+            let positionalAudio;
+
+            let isVideoPlaying = false;
+
+            console.log(videoAsset.name);
+            function startLoading()
+            { 
+
+              video = document.createElement('video');
+              video.src = videoSrc;
+              console.log(video.src);
+              video.loop = true;
+              video.playsInline =true;
+              video.muted = true;
+              
+              console.log(video.play());
+
+              videoTexture = new THREE.VideoTexture(video);
+              videoTexture.minFilter = THREE.LinearFilter;
+              videoTexture.magFilter = THREE.LinearFilter;
+              videoTexture.flipY = false;
+              video.generateMipmaps = false;
+              video.colorSpace = THREE.SRGBColorSpace;
+              // Wait for both canplay and loadedmetadata events before starting the animation
+              let isCanPlay = false;
+              let isMetadataLoaded = false;
+
+              video.addEventListener('play',() =>{
+                if (audioElement) {
+                      video.currentTime = audioElement.currentTime;
+                      //audioElement.play();
+                  }
+                      console.log("Video current Time: " +video.currentTime);
+                      console.log("audio Current Time: " + audioElement.currentTime);
+              });
+
+              //this check if event is fired when the user agent can play the media, but estimates that not enough data has been loaded to play the media up to its end without having to stop for further buffering of content.
+              video.addEventListener('canplay', () => {
+                  isCanPlay = true;
+                  //checkStartAnimation();
+            });
+
+            //this check if loadedmetadata event is fired when the metadata has been loaded.
+              video.addEventListener('loadedmetadata', () => {
+                  isMetadataLoaded = true;
+                  console.log(video);
+                  //checkStartAnimation();
+            });
+
+            // this function check both of the condition have reach true then applied running 2 function animated() and applyVideoTextureToPlane
+            function checkStartAnimation() {
+                if (isCanPlay && isMetadataLoaded && isVideoPlaying == true) {
+                      animate();
+                      applyVideoTextureToPlane(scene, videoTexture, positionalAudio);
+            }
+          }
+
+          function checkAudio()
+          {
+            createAudio();
+          }
+
+          const startButton = document.getElementById('startButton');
+                startButton.addEventListener('click', () => {
+                // Call the functions to start animation, apply video texture, and create audio
+                checkAudio();
+
+                // Hide the button
+                startButton.classList.remove('show-button');
+                startButton.classList.add('hide-button');
+
+                // Store the button state in local storage
+                localStorage.setItem('buttonState', 'hidden');
+                
+                if(isVideoPlaying)
+                {
+                  video.pause();
+                  isVideoPlaying = false;
+                }
+                else
+                {
+                      if (video.play() !== undefined) {
+                    video.play()
+                        .then(() => {
+                      // Playback has started successfully
+                      console.log('Playback started');
+                      isVideoPlaying = true;
+                      checkStartAnimation();
+                      video.play();
+                    })
+                        .catch(error => {
+                          // Playback failed to start
+                          console.error('Playback failed:', error);
+                    });
+                  } else {
+                          // Some older browsers might not return a promise, and the video will play automatically
+                          console.log('Playback started (no promise)');
+                  }
+
+                  var resp = audioElement.play();
+
+                  if (resp!== undefined) {
+                      resp.then(_ => {
+                      // autoplay starts!
+                      console.log('Audio playback started');
+                  }).catch(error => {
+                    //show error
+                    console.error('Audio playback failed:', error);
+                  });
+              }
+          }        
+      });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const buttonState = localStorage.getItem('buttonState');
+
+            if (buttonState === 'hidden') {
+              startButton.classList.add('hide-button');
+            }
+        });
+
+              function applyVideoTextureToPlane(scene, videoTexture, audio) {
+                  scene.traverse((child) => {
+                  // Assuming the video plane has a specific name or property
+                  if (child.name === 'VideoPlane') {
+                        const material = new THREE.MeshBasicMaterial({ map: videoTexture });
+                        child.material = material;
+
+                        // Attach audio to the video plane
+                        child.add(audio);
+                }
+              });
+            }
+
+              // Create a PositionalAudio object for the video
+              function createAudio() {
+                listener = new THREE.AudioListener();
+			          camera.add( listener );
+
+                positionalAudio = new THREE.PositionalAudio( listener );
+                const audioContext = listener.context;
+                
+                //audioElement = document.getElementById( 'music' );
+                const sourceNode = audioContext.createMediaElementSource(audioElement);
+                positionalAudio.setNodeSource(sourceNode);
+                if (audioElement) {
+                      video.currentTime = audioElement.currentTime;
+                      audioElement.play();
+                  }
+                audioElement.volume = 1.0;
+			          positionalAudio.setRefDistance( 0.4 );
+			          positionalAudio.setDirectionalCone( 180, 230, 0.1 );
+                console.log(audioElement);
+            }
+        }
+        
+                // Define a constant movement speed for both mesh and camera movement
+                const movementSpeed = 0.1;
+
+                function animate() {
+                    requestAnimationFrame(animate);
+                    // Update the capsule mesh position to match the camera's position
+                    // Update the animation mixer if it exists  
+                    if (mixer) {
+                      mixer.update(clock.getDelta());
+                    }
+
+                    if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
+                          videoTexture.needsUpdate = true;
+                    }
+                    
+                    // Update mesh and camera movement based on the view mode
+                    if (isThirdPersonView) {
+                      // Third-person view: Move the mesh and update camera position accordingly
+
+                    if (keys.ArrowLeft || keys.KeyA) {
+                        const cameraDirection = new THREE.Vector3();
+                        camera.getWorldDirection(cameraDirection);
+                        const cameraMoveDirection = new THREE.Vector3(cameraDirection.z, 0, -cameraDirection.x);
+                        cameraMoveDirection.multiplyScalar(movementSpeed);
+                        capsuleMesh.position.add(cameraMoveDirection);
+                    }
+
+                    if (keys.ArrowRight || keys.KeyD) {
+                      const cameraDirection = new THREE.Vector3();
+                      camera.getWorldDirection(cameraDirection);
+                      const cameraMoveDirection = new THREE.Vector3(-cameraDirection.z, 0, cameraDirection.x);
+                      cameraMoveDirection.multiplyScalar(movementSpeed);
+                      capsuleMesh.position.add(cameraMoveDirection);
+                    }
+
+                    if (keys.ArrowUp || keys.KeyW) {
+                      const cameraDirection = new THREE.Vector3();
+                      camera.getWorldDirection(cameraDirection);
+                      const cameraMoveDirection = new THREE.Vector3(cameraDirection.x, 0, cameraDirection.z);
+                      cameraMoveDirection.multiplyScalar(movementSpeed);
+                      capsuleMesh.position.add(cameraMoveDirection);
+                    }
+
+                    if (keys.ArrowDown || keys.KeyS) {
+                      const cameraDirection = new THREE.Vector3();
+                      camera.getWorldDirection(cameraDirection);
+                      const cameraMoveDirection = new THREE.Vector3(-cameraDirection.x, 0, -cameraDirection.z);
+                      cameraMoveDirection.multiplyScalar(movementSpeed);
+                      capsuleMesh.position.add(cameraMoveDirection);
+                    }
+
+                    // Update the camera position to follow the mesh
+                      let cameraOffset = new THREE.Vector3(0, 1, -3); // Adjust the offset as needed
+                      let cameraPosition = capsuleMesh.position.clone().add(cameraOffset);
+                      camera.position.copy(cameraPosition);
+
+                      // Camera rotation with Q and E keys for third-person view
+                    if (keys.KeyQ) {
+                      thirdPersonCameraPivot.rotateY(rotationSpeed); 
+                      console.log(thirdPersonCameraPivot.rotation.y);
+                    }
+                    if (keys.KeyE) {
+                      thirdPersonCameraPivot.rotateY(-rotationSpeed);
+                      console.log(thirdPersonCameraPivot.rotation.y);
+                    }
+                    // Calculate the new camera position relative to the capsuleMesh
+                    const relativePosition = new THREE.Vector3(0, 1, -3).applyEuler(thirdPersonCameraPivot.rotation);
+                    camera.position.copy(capsuleMesh.position.clone().add(relativePosition));
+                    camera.lookAt(capsuleMesh.position);
+                  } else {
+                    // First-person view: Update camera movement and rotation
+                      const cameraMoveDirection = new THREE.Vector3();
+
+                      // Log the positions for debugging
+                      // Update the position of the third-person camera's pivot to match the first-person camera
+                      // Update the position of the capsuleMesh and third-person camera pivot
+                      if (capsuleMesh) {
+                          capsuleMesh.position.copy(camera.position);
+                      }
+
+
+                    if (keys.ArrowLeft || keys.KeyA) {
+                        const cameraDirection = new THREE.Vector3();
+                        camera.getWorldDirection(cameraDirection);
+                        const cameraMoveDirection = new THREE.Vector3(cameraDirection.z, 0, -cameraDirection.x);
+                        cameraMoveDirection.multiplyScalar(movementSpeed);
+                        camera.position.add(cameraMoveDirection);
+                    }
+
+                    if (keys.ArrowRight || keys.KeyD) {
+                      const cameraDirection = new THREE.Vector3();
+                      camera.getWorldDirection(cameraDirection);
+                      const cameraMoveDirection = new THREE.Vector3(-cameraDirection.z, 0, cameraDirection.x);
+                      cameraMoveDirection.multiplyScalar(movementSpeed);
+                      camera.position.add(cameraMoveDirection);
+                    }
+
+                    if (keys.ArrowUp || keys.KeyW) {
+                      const cameraDirection = new THREE.Vector3();
+                      camera.getWorldDirection(cameraDirection);
+                      const cameraMoveDirection = new THREE.Vector3(cameraDirection.x, 0, cameraDirection.z);
+                      cameraMoveDirection.multiplyScalar(movementSpeed);
+                      camera.position.add(cameraMoveDirection);
+                    }
+
+                    if (keys.ArrowDown || keys.KeyS) {
+                      const cameraDirection = new THREE.Vector3();
+                      camera.getWorldDirection(cameraDirection);
+                      const cameraMoveDirection = new THREE.Vector3(-cameraDirection.x, 0, -cameraDirection.z);
+                      cameraMoveDirection.multiplyScalar(movementSpeed);
+                      camera.position.add(cameraMoveDirection);
+                    }
+                  // ... (your existing camera rotation code here)
+                  // Camera rotation with Q and E keys
+                  if (keys.KeyQ) {
+                    camera.rotateY(rotationSpeed);
+                  }
+                  if (keys.KeyE) {
+                    camera.rotateY(-rotationSpeed);
+                  }
+              }
+
+    // Add keydown and keyup event listeners for Q and E keys
+  document.addEventListener("keydown", function (event) {
+    if (event.code === "KeyQ") {
+      keys.KeyQ = true;
+    } else if (event.code === "KeyE") {
+      keys.KeyE = true;
+    }
+    // Your other keydown event handling code here
+  });
+
+  document.addEventListener("keyup", function (event) {
+    if (event.code === "KeyQ") {
+      keys.KeyQ = false;
+    } else if (event.code === "KeyE") {
+      keys.KeyE = false;
+    }
+    // Your other keyup event handling code here
+  });
+
+        // Render the scene with the camera
+          renderer.render(scene, camera);
+    }
+}
+    window.addEventListener("load",loaderGTFL);
+
+    // Create an array to hold audio players
+    const audioPlayers = [];
+
+function clearAudioPlayers() {
+  // Stop and remove all audio players
+  for (const audioPlayer of audioPlayers) {
+    audioPlayer.pause();
+    audioPlayer.remove();
+  }
+  // Clear the array
+  audioPlayers.length = 0;
+}
+
+    function displayMessage(userMessage, botReply) {
+    const chatDisplay = document.getElementById('chat-display');
+    const userMessageHTML = `<div class="message sent"><strong>You:</strong>${userMessage}</div>`;
+    chatDisplay.innerHTML += userMessageHTML;
+}
+
+function displayMessageBot(botReply)
+{
+    const chatDisplay = document.getElementById('chat-display');
+    // chatDisplay.innerHTML += `<p><strong>Bot:</strong> ${botReply}</p>`;
+    const botMessageHTML = `<div class="message received"><strong>Bot:</strong> ${botReply}</div>`;
+    chatDisplay.innerHTML += botMessageHTML;
+
+    // Scroll to the bottom of the chat display
+  chatDisplay.scrollTop = chatDisplay.scrollHeight;
+}
+
+function sendMessage() {
+    const userMessage = document.getElementById('user-input').value;
+    displayMessage(userMessage);
+    // displayMessageBot('...');
+    document.getElementById('user-input').value = '';
+     // Send the user message to the server
+      fetch('/chat', {
+        method: 'POST',
+        body: new URLSearchParams({ 'user_message': userMessage,  'current_language': currentLanguage}),
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+    })
+    .then(response => response.json())
+    .then(data =>{
+            // Wait for a short delay before displaying the bot's actual reply
+      setTimeout(() => {
+        displayMessageBot(data.bot_reply);
+        console.log(data.bot_reply);
+        getAudio(data.bot_reply); // Fetch and play the audio for bot's reply
+      }, 500); // Adjust the delay (in milliseconds) as needed
+    })
+    .catch(error => console.error('Error:', error));
+  }
+
+// Function to fetch the audio from the /talk route
+function getAudio(transcript) {
+        fetch('/talk', {
+            method: 'POST',
+            body: new URLSearchParams({ 'transcript': transcript }),
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        })
+        .then(response => response.blob())
+        .then(blob => {
+            // Convert the Blob to a Blob URL
+            const audioUrl = URL.createObjectURL(blob);
+             // Stop and remove previous audio players before playing the new message
+            clearAudioPlayers();
+            botAnimationsToPlay2 = [4, 5];
+            sharedFunctions.playNPCAnimation(model2, animations,botAnimationsToPlay2);
+            // Play the audio
+            const audioPlayer = new Audio(audioUrl);
+            audioPlayer.play();
+            // Add the new audio player to the array
+            audioPlayers.push(audioPlayer);
+
+            // Listen for the "ended" event of the audioPlayer
+            audioPlayer.addEventListener("ended", () => {
+            // Function to stop or reset the animations when the audio finishes playing
+                changeAnimations();
+                resetAnimations(5);
+            });
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    function changeAnimations() {
+  // Stop or reset the animations as needed
+      botAnimationsToPlay3 = [3];
+      sharedFunctions.playNPCAnimation(model2, animations,botAnimationsToPlay3);
+}
+
+function resetAnimations(animationIndexToReset) {
+  // Check if the model has animations and the animation index is valid
+  if (animations && animations.length > animationIndexToReset) {
+    // Create a new action for the desired animation clip
+    const animationToReset = animations[animationIndexToReset];
+
+    // Check if the model has an animation mixer and the animation clip is valid
+    if (mixer && animationToReset) {
+      // Stop the previous animation action (if any) for the animation to reset
+      const previousAction = animationActions[animationToReset.name];
+      if (previousAction) {
+        previousAction.stop();
+      }
+
+      // Create a new animation action for the animation to reset
+      const action = mixer.clipAction(animationToReset);
+      action.reset(); // Reset the animation to the starting frame
+      //action.play(); // Start playing the animation from the beginning
+      action.stop();
+
+      // Store the new animation action in the animationActions object
+      animationActions[animationToReset.name] = action;
+      console.log(action);
+    }
+  }
+}
+// Prevent the default form submission behavior
+document.getElementById('user-input-form').addEventListener('submit', function(event) {
+    event.preventDefault();
+    sendMessage();
+});
+</script>
+
+<script>
+  // Initialize the SpeechRecognition API
+const recognition = new webkitSpeechRecognition();
+recognition.continuous = true;
+let isRecording = false;
+
+function toggleChatbox() {
+  const chatboxButton = document.querySelector('.chatbox-button');
+
+// Toggle the 'expanded' class to show/hide the chatbox
+chatboxButton.classList.toggle('expanded');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,328 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f0f0f0;
+  overflow: hidden; /* Prevent scrollbar during loading */
+  
+}
+
+.chatbox {
+  position: fixed;
+  bottom: 50px;
+  right: 50px;
+  width: 400px;
+  max-width: 90%;
+  background-color: #fff;
+  border-radius: 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  display: none;
+}
+
+h1 {
+  background-image: linear-gradient(to right, #673ab7, #813bcb, #9e38de, #bc32ef, #dc22ff);
+  color: #fff;
+  text-align: center;
+  padding: 10px;
+  margin: 0;
+  border-top-left-radius: 15px;
+  border-top-right-radius: 15px;
+}
+
+#chat-display {
+  height: 300px;
+  overflow-y: scroll;
+  padding: 10px;
+  text-align: right;
+}
+
+
+#user-input-form {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  border-top: 1px solid #ccc;
+}
+
+#user-input {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 5px;
+  outline: none;
+}
+
+#user-input-form button {
+  margin-left: 10px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 5px;
+  background-color: #007bff;
+  color: #fff;
+  cursor: pointer;
+}
+
+#user-input-form button:hover {
+  background-color: #0056b3;
+}
+
+.message {
+  margin: 10px 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+}
+
+.message.received {
+  background-color: #f5f5f5;
+  text-align: left; /* Align bot messages to the left */
+  position: relative; /* Add relative positioning to the container */
+
+  /* Add animation and transition properties for bubble effect */
+  animation-name: bubblePop;
+  animation-duration: 0.5s;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards; /* Keeps the last animation state after it ends */
+}
+
+@keyframes bubblePop {
+  0% { transform: scale(0); opacity: 0; } /* Start with zero scale and opacity */
+  100% { transform: scale(1); opacity: 1; } /* End with full scale and opacity */
+}
+
+.message.sent {
+  background-image: linear-gradient(to right, #673ab7, #813bcb, #9e38de, #bc32ef, #dc22ff);
+  color: #fff;
+  text-align: right; /* Align user messages to the right */
+  display: inline-block;
+}
+
+#background-canvas
+{
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+}
+
+/* Chatbox button style */
+.chatbox-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  height: 50px;
+  width: 50px;
+  background-image: linear-gradient(to right, #673ab7, #813bcb, #9e38de, #bc32ef, #dc22ff);
+  z-index: 9999;
+  border-radius: 30px;
+  box-shadow: 0px 10px 15px rgba(0, 0, 0, 0.1);
+  text-align: center;
+  line-height: 50px;
+  cursor: pointer;
+  transition: all 0.5s ease;
+}
+
+.chatbox-button .plus-sign
+{
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(0deg); /* Rotate 0 degrees initially */
+  color: #ffffff; /* Use a bright color like white */
+  font-size: 24px;
+  transition: transform 0.5s linear;
+}
+
+.chatbox-button.expanded .plus-sign {
+  transform: translate(-50%, -50%) rotate(45deg); /* Rotate 45 degrees when expanded */
+}
+
+/* Expanded chatbox style */
+.chatbox-expanded {
+  position: fixed;
+  bottom: 80px;
+  right: 50px;
+  max-width: 90%;
+  background-color: #fff;
+  border-radius: 15px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  transition: width 0.5s;
+  display: none;
+}
+
+.language-buttons {
+  position: absolute;
+  bottom: 0px; /* Adjust the distance from the bottom as needed */
+  right: 70px; /* Adjust the distance from the right as needed */
+  top:  10px;
+  display: flex; /* Use flexbox to align the buttons horizontally */
+  height: 100%; /* Use flexbox to align the buttons horizontally */
+}
+
+/* Style for the record button */
+#record-button {
+  position: absolute;
+  border: none;
+  border-radius: 5px;
+  top: 10px;
+  left: 7px;
+  padding: 7px 10px;
+  margin-right: 10px; /* Add margin between the "Record" button and the h1 element */
+  cursor: pointer;
+  grid-template-columns: 70% 70%;
+  border-radius: o;
+  margin: 0px 0px 0px 0px;
+  
+  min-height: 33px;
+  min-width: 70px;
+  background-color: #fff;
+  color: #000;
+}
+
+#record-button.active {
+  background-color: #ff0000;
+  color: #fff;
+}
+
+.dropdown {
+  position: absolute;
+  margin-bottom: 10px; /* Adjust the distance from the bottom as needed */
+  margin-right: 10px;
+}
+
+.dropbtn {
+  background-color: #f5f5f5;
+  color: #000;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.arrow-down {
+  margin-left: 5px;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #fff;
+  min-width: 160px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+}
+
+.dropdown-content a {
+  color: #000;
+  padding: 8px 12px;
+  text-decoration: none;
+  display: block;
+}
+
+  .dropdown-content a:hover {
+    background-color: #f1f1f1;
+  }
+  
+  .dropdown:hover .dropdown-content {
+    display: block;
+  }
+
+  /* Initially show the button */
+.show-button {
+  display: block;
+  border-radius: 50%; /* Make it a circle */
+  width: 50px; /* Adjust the width to your desired size */
+  height: 50px; /* Same as width for a perfect circle */
+  position: absolute;
+  top: 20px;
+  left: 50px; /* Adjust the left position */
+  transform: translateX(-50%); /* Center horizontally */
+}
+
+/* Hide the button */
+.hide-button {
+  display: none;
+}
+
+.loading-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(0, 0, 0, 1); /* Start with dark background */
+  color: white;
+  z-index: 9999; /* Ensure it's on top */
+}
+
+.content {
+  display: none; /* Initially hide the content */
+}
+
+.loading-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-dots-container {
+  display: flex;
+  align-items: center;
+  margin-left:  8px;
+}
+
+.loading-dot {
+  width: 6px; /* Adjust the size as needed */
+  height: 6px; /* Adjust the size as needed */
+  background-color: white;
+  border-radius: 50%;
+  animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+.loading-progress {
+  margin-left: 10px;
+  font-size: 16px; /* Initial font size */
+}
+
+.loading-content {
+  text-align: center;
+  color: white;
+}
+.function-names {
+  font-size: 16px;
+  text-align: center; /* Center align the text */
+  color: white;
+}
+.rule-names-container {
+  max-height: 150px; /* Set the maximum height for the container */
+  scrollbar-width: none;
+  overflow-y: scroll; /* Hide the scrollbar */
+  -webkit-overflow-scrolling: touch; /* Enable smooth touch scrolling on mobile */
+  display: flex;
+  flex-direction: column;
+}
+
+.rule-names-container::-webkit-scrollbar {
+  display: none; /* Hide scrollbar for Webkit browsers (Chrome, Safari, etc.) */
+}
+
+.rule-names {
+  font-size: 16px;
+  text-align: center; /* Center align the text */
+  margin-top: 10px; /* Add some margin from the loading progress */
+  color: white;
+}
